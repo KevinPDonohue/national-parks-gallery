@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>National Parks Gallery</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>National Parks Gallery</h1>
+    <p class="subtitle">A rotating collection of America's wild places</p>
+  </header>
+
+  <main>
+    <div id="slideshow">
+      <button id="prev" aria-label="Previous photo">&#8592;</button>
+      <div id="slide-container">
+        <img id="slide-img" src="" alt="" />
+        <div id="slide-caption">
+          <span id="park-name"></span>
+          <span id="photo-credit"></span>
+        </div>
+      </div>
+      <button id="next" aria-label="Next photo">&#8594;</button>
+    </div>
+
+    <div id="dots"></div>
+
+    <div id="grid"></div>
+  </main>
+
+  <footer>
+    <p>Photos courtesy of the <a href="https://www.nps.gov" target="_blank">National Park Service</a></p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
