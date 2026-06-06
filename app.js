@@ -14,6 +14,21 @@ const PARK_CODES = [
   'olym',  // Olympic
 ];
 
+// Keywords in titles/tags that suggest people, structures, or man-made items
+const EXCLUDE_KEYWORDS = [
+  'visitor', 'center', 'building', 'lodge', 'cabin', 'ranger', 'station',
+  'people', 'person', 'hiker', 'hikers', 'climber', 'tourist', 'tourists',
+  'crowd', 'staff', 'employee', 'volunteer', 'sign', 'road', 'highway',
+  'parking', 'campground', 'tent', 'boat', 'bridge', 'dam', 'fence',
+  'trail crew', 'construction', 'facility', 'museum', 'historic', 'monument',
+  'portrait', 'selfie', 'group', 'family', 'children', 'kids', 'school',
+];
+
+function isNaturePhoto(photo) {
+  const text = `${photo.title} ${photo.tags || ''}`.toLowerCase();
+  return !EXCLUDE_KEYWORDS.some(kw => text.includes(kw));
+}
+
 let photos = [];
 let current = 0;
 let timer = null;
@@ -31,7 +46,7 @@ async function fetchPhotos() {
 
   const results = await Promise.allSettled(
     PARK_CODES.map(code =>
-      fetch(`https://developer.nps.gov/api/v1/multimedia/galleries/assets?parkCode=${code}&limit=3&api_key=${API_KEY}`)
+      fetch(`https://developer.nps.gov/api/v1/multimedia/galleries/assets?parkCode=${code}&limit=10&api_key=${API_KEY}`)
         .then(r => r.json())
         .then(data => ({ code, data }))
     )
@@ -44,12 +59,14 @@ async function fetchPhotos() {
 
     for (const asset of data.data) {
       if (asset.fileInfo?.url) {
-        photos.push({
+        const photo = {
           url: asset.fileInfo.url,
           park: asset.relatedParks?.[0]?.fullName || code.toUpperCase(),
           credit: asset.credit || '',
           title: asset.title || '',
-        });
+          tags: (asset.tags || []).join(' '),
+        };
+        if (isNaturePhoto(photo)) photos.push(photo);
       }
     }
   }
@@ -83,12 +100,14 @@ async function fetchParkImages() {
   for (const park of res.data) {
     for (const img of (park.images || []).slice(0, 2)) {
       if (img.url) {
-        photos.push({
+        const photo = {
           url: img.url.startsWith('http') ? img.url : 'https://www.nps.gov' + img.url,
           park: park.fullName,
           credit: img.credit || '',
           title: img.title || '',
-        });
+          tags: (img.tags || []).join(' '),
+        };
+        if (isNaturePhoto(photo)) photos.push(photo);
       }
     }
   }
