@@ -108,7 +108,6 @@ async function fetchPhotos() {
     return;
   }
 
-  shuffle(photos);
   buildGrid();
 }
 
