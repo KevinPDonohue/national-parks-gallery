@@ -1,6 +1,5 @@
 const API_KEY = 'n6oTsvuNfP9STH6DHIobRkte91e8g7nwcmQ3lUFp';
 
-// A curated list of park codes to pull photos from
 const PARK_CODES = [
   'yell',  // Yellowstone
   'grca',  // Grand Canyon
@@ -14,7 +13,6 @@ const PARK_CODES = [
   'olym',  // Olympic
 ];
 
-// Keywords that suggest non-nature content
 const EXCLUDE_KEYWORDS = [
   'visitor', 'center', 'building', 'lodge', 'cabin', 'ranger', 'station',
   'people', 'person', 'hiker', 'hikers', 'climber', 'tourist', 'tourists',
@@ -24,11 +22,10 @@ const EXCLUDE_KEYWORDS = [
   'portrait', 'selfie', 'group', 'family', 'children', 'kids', 'school',
   'craft', 'map', 'art', 'exhibit', 'display', 'painting', 'drawing',
   'artifact', 'object', 'tool', 'weapon', 'pottery', 'basket', 'textile',
-  'document', 'photo of', 'photograph of', 'illustration', 'diagram',
-  'chart', 'poster', 'brochure', 'interpretive', 'wayside', 'plaque',
+  'document', 'illustration', 'diagram', 'chart', 'poster', 'brochure',
+  'interpretive', 'wayside', 'plaque',
 ];
 
-// Keywords that strongly suggest a nature/landscape photo
 const INCLUDE_KEYWORDS = [
   'landscape', 'scenery', 'scenic', 'mountain', 'valley', 'canyon', 'river',
   'lake', 'forest', 'wilderness', 'glacier', 'waterfall', 'meadow', 'sunrise',
@@ -40,35 +37,43 @@ const INCLUDE_KEYWORDS = [
 
 function isNaturePhoto(photo) {
   const text = `${photo.title} ${photo.tags || ''}`.toLowerCase();
-
-  // Reject if any exclude keyword matches
   if (EXCLUDE_KEYWORDS.some(kw => text.includes(kw))) return false;
-
-  // Accept if any nature keyword matches, or if there's no strong signal either way
   const hasNatureSignal = INCLUDE_KEYWORDS.some(kw => text.includes(kw));
   const hasNoTitle = !photo.title || photo.title.trim().length < 3;
-
-  // If title is very short/empty and no nature signal, skip it (likely metadata)
   if (!hasNatureSignal && hasNoTitle) return false;
-
   return true;
 }
 
 let photos = [];
-let current = 0;
-let timer = null;
-const INTERVAL = 5000;
-
-const slideImg = document.getElementById('slide-img');
-const parkName = document.getElementById('park-name');
-const photoCredit = document.getElementById('photo-credit');
-const dotsEl = document.getElementById('dots');
 const gridEl = document.getElementById('grid');
-const slideContainer = document.getElementById('slide-container');
+
+// Lightbox
+const lightbox = document.createElement('div');
+lightbox.id = 'lightbox';
+lightbox.innerHTML = `
+  <button id="lightbox-close" aria-label="Close">&times;</button>
+  <img id="lightbox-img" src="" alt="" />
+  <div id="lightbox-caption"></div>
+`;
+document.body.appendChild(lightbox);
+
+lightbox.querySelector('#lightbox-close').addEventListener('click', closeLightbox);
+lightbox.addEventListener('click', e => { if (e.target === lightbox) closeLightbox(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+function openLightbox(photo) {
+  lightbox.querySelector('#lightbox-img').src = photo.url;
+  lightbox.querySelector('#lightbox-img').alt = photo.title || photo.park;
+  lightbox.querySelector('#lightbox-caption').textContent =
+    `${photo.park}${photo.credit ? ' · ' + photo.credit : ''}`;
+  lightbox.classList.add('open');
+}
+
+function closeLightbox() {
+  lightbox.classList.remove('open');
+}
 
 async function fetchPhotos() {
-  slideContainer.classList.add('loading');
-
   const results = await Promise.allSettled(
     PARK_CODES.map(code =>
       fetch(`https://developer.nps.gov/api/v1/multimedia/galleries/assets?parkCode=${code}&limit=20&api_key=${API_KEY}`)
@@ -96,23 +101,15 @@ async function fetchPhotos() {
     }
   }
 
-  // Fallback: try the parks endpoint for images if gallery gave nothing
-  if (photos.length === 0) {
-    await fetchParkImages();
-  }
-
-  slideContainer.classList.remove('loading');
+  if (photos.length === 0) await fetchParkImages();
 
   if (photos.length === 0) {
-    showError('No photos found. Check your API key and try again.');
+    gridEl.innerHTML = '<p style="color:#f85149;padding:2rem;text-align:center">No photos found. Check your API key.</p>';
     return;
   }
 
   shuffle(photos);
   buildGrid();
-  buildDots();
-  showSlide(0);
-  startTimer();
 }
 
 async function fetchParkImages() {
@@ -123,14 +120,14 @@ async function fetchParkImages() {
   if (!res.data) return;
 
   for (const park of res.data) {
-    for (const img of (park.images || []).slice(0, 2)) {
+    for (const img of (park.images || [])) {
       if (img.url) {
         const photo = {
           url: img.url.startsWith('http') ? img.url : 'https://www.nps.gov' + img.url,
           park: park.fullName,
           credit: img.credit || '',
           title: img.title || '',
-          tags: (img.tags || []).join(' '),
+          tags: '',
         };
         if (isNaturePhoto(photo)) photos.push(photo);
       }
@@ -138,60 +135,26 @@ async function fetchParkImages() {
   }
 }
 
-function showSlide(index) {
-  current = (index + photos.length) % photos.length;
-  const photo = photos[current];
-
-  slideImg.classList.add('fade');
-  setTimeout(() => {
-    slideImg.src = photo.url;
-    slideImg.alt = photo.title || photo.park;
-    parkName.textContent = photo.park;
-    photoCredit.textContent = photo.credit ? `Photo: ${photo.credit}` : '';
-    slideImg.classList.remove('fade');
-  }, 300);
-
-  document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === current));
-  document.querySelectorAll('.thumb').forEach((t, i) => t.classList.toggle('active', i === current));
-}
-
-function buildDots() {
-  dotsEl.innerHTML = '';
-  photos.forEach((_, i) => {
-    const dot = document.createElement('button');
-    dot.className = 'dot';
-    dot.setAttribute('aria-label', `Go to photo ${i + 1}`);
-    dot.addEventListener('click', () => { resetTimer(); showSlide(i); });
-    dotsEl.appendChild(dot);
-  });
-}
-
 function buildGrid() {
   gridEl.innerHTML = '';
-  photos.forEach((photo, i) => {
+  photos.forEach(photo => {
     const div = document.createElement('div');
     div.className = 'thumb';
+
     const img = document.createElement('img');
     img.src = photo.url;
-    img.alt = photo.park;
+    img.alt = photo.title || photo.park;
     img.loading = 'lazy';
+
+    const caption = document.createElement('div');
+    caption.className = 'caption';
+    caption.textContent = photo.park;
+
     div.appendChild(img);
-    div.addEventListener('click', () => { resetTimer(); showSlide(i); });
+    div.appendChild(caption);
+    div.addEventListener('click', () => openLightbox(photo));
     gridEl.appendChild(div);
   });
-}
-
-function startTimer() {
-  timer = setInterval(() => showSlide(current + 1), INTERVAL);
-}
-
-function resetTimer() {
-  clearInterval(timer);
-  startTimer();
-}
-
-function showError(msg) {
-  slideContainer.innerHTML = `<p id="error-msg">${msg}</p>`;
 }
 
 function shuffle(arr) {
@@ -200,14 +163,5 @@ function shuffle(arr) {
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
 }
-
-document.getElementById('prev').addEventListener('click', () => { resetTimer(); showSlide(current - 1); });
-document.getElementById('next').addEventListener('click', () => { resetTimer(); showSlide(current + 1); });
-
-// Keyboard navigation
-document.addEventListener('keydown', e => {
-  if (e.key === 'ArrowLeft') { resetTimer(); showSlide(current - 1); }
-  if (e.key === 'ArrowRight') { resetTimer(); showSlide(current + 1); }
-});
 
 fetchPhotos();
