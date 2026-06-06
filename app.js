@@ -14,7 +14,7 @@ const PARK_CODES = [
   'olym',  // Olympic
 ];
 
-// Keywords in titles/tags that suggest people, structures, or man-made items
+// Keywords that suggest non-nature content
 const EXCLUDE_KEYWORDS = [
   'visitor', 'center', 'building', 'lodge', 'cabin', 'ranger', 'station',
   'people', 'person', 'hiker', 'hikers', 'climber', 'tourist', 'tourists',
@@ -22,11 +22,36 @@ const EXCLUDE_KEYWORDS = [
   'parking', 'campground', 'tent', 'boat', 'bridge', 'dam', 'fence',
   'trail crew', 'construction', 'facility', 'museum', 'historic', 'monument',
   'portrait', 'selfie', 'group', 'family', 'children', 'kids', 'school',
+  'craft', 'map', 'art', 'exhibit', 'display', 'painting', 'drawing',
+  'artifact', 'object', 'tool', 'weapon', 'pottery', 'basket', 'textile',
+  'document', 'photo of', 'photograph of', 'illustration', 'diagram',
+  'chart', 'poster', 'brochure', 'interpretive', 'wayside', 'plaque',
+];
+
+// Keywords that strongly suggest a nature/landscape photo
+const INCLUDE_KEYWORDS = [
+  'landscape', 'scenery', 'scenic', 'mountain', 'valley', 'canyon', 'river',
+  'lake', 'forest', 'wilderness', 'glacier', 'waterfall', 'meadow', 'sunrise',
+  'sunset', 'sky', 'cloud', 'storm', 'snow', 'ice', 'desert', 'cliff',
+  'rock', 'peak', 'ridge', 'vista', 'overlook', 'wildlife', 'animal',
+  'bird', 'bear', 'elk', 'bison', 'deer', 'wolf', 'fox', 'eagle',
+  'tree', 'flower', 'plant', 'geyser', 'hot spring', 'tide', 'coast', 'beach',
 ];
 
 function isNaturePhoto(photo) {
   const text = `${photo.title} ${photo.tags || ''}`.toLowerCase();
-  return !EXCLUDE_KEYWORDS.some(kw => text.includes(kw));
+
+  // Reject if any exclude keyword matches
+  if (EXCLUDE_KEYWORDS.some(kw => text.includes(kw))) return false;
+
+  // Accept if any nature keyword matches, or if there's no strong signal either way
+  const hasNatureSignal = INCLUDE_KEYWORDS.some(kw => text.includes(kw));
+  const hasNoTitle = !photo.title || photo.title.trim().length < 3;
+
+  // If title is very short/empty and no nature signal, skip it (likely metadata)
+  if (!hasNatureSignal && hasNoTitle) return false;
+
+  return true;
 }
 
 let photos = [];
@@ -46,7 +71,7 @@ async function fetchPhotos() {
 
   const results = await Promise.allSettled(
     PARK_CODES.map(code =>
-      fetch(`https://developer.nps.gov/api/v1/multimedia/galleries/assets?parkCode=${code}&limit=10&api_key=${API_KEY}`)
+      fetch(`https://developer.nps.gov/api/v1/multimedia/galleries/assets?parkCode=${code}&limit=20&api_key=${API_KEY}`)
         .then(r => r.json())
         .then(data => ({ code, data }))
     )
