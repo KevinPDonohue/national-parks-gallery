@@ -20,10 +20,10 @@ const EXCLUDE_KEYWORDS = [
   'parking', 'campground', 'tent', 'boat', 'bridge', 'dam', 'fence',
   'trail crew', 'construction', 'facility', 'museum', 'historic', 'monument',
   'portrait', 'selfie', 'group', 'family', 'children', 'kids', 'school',
-  'craft', 'map', 'art', 'exhibit', 'display', 'painting', 'drawing',
-  'artifact', 'object', 'tool', 'weapon', 'pottery', 'basket', 'textile',
-  'document', 'illustration', 'diagram', 'chart', 'poster', 'brochure',
-  'interpretive', 'wayside', 'plaque',
+  'craft', 'map', 'maps', 'trail map', 'park map', 'art', 'exhibit', 'display',
+  'painting', 'drawing', 'artifact', 'object', 'tool', 'weapon', 'pottery',
+  'basket', 'textile', 'document', 'illustration', 'diagram', 'chart',
+  'poster', 'brochure', 'interpretive', 'wayside', 'plaque', 'entrance sign',
 ];
 
 const INCLUDE_KEYWORDS = [
